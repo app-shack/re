@@ -290,8 +290,8 @@ int tls_set_selfsigned(struct tls *tls, const char *cn)
 	    !X509_set_subject_name(cert, subj))
 		goto out;
 
-	if (!X509_gmtime_adj(X509_get_notBefore(cert), -3600*24*365) ||
-	    !X509_gmtime_adj(X509_get_notAfter(cert),   3600*24*365*10))
+	if (!X509_gmtime_adj(X509_get0_notBefore(cert), -3600*24*365) ||
+	    !X509_gmtime_adj(X509_get0_notAfter(cert),   3600*24*365*10))
 		goto out;
 
 	if (!X509_set_pubkey(cert, key))

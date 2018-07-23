@@ -18,6 +18,19 @@
 #include "main.h"
 
 
+/* 	Fix for supporting OpenSSL 1.1.0 found at the following link.
+ * https://github.com/irssi/irssi/pull/628/commits */
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+/* The two functions below could be already defined if OPENSSL_API_COMPAT is
+ * below the 1.1.0 version so let's do a clean start */
+#undef  X509_get_notBefore
+#undef  X509_get_notAfter
+#define X509_get_notBefore(x)     X509_get0_notBefore(x)
+#define X509_get_notAfter(x)      X509_get0_notAfter(x)
+#define ASN1_STRING_data(x)       ASN1_STRING_get0_data(x)
+#endif
+
+
 #if defined (HAVE_PTHREAD) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 
 
@@ -149,8 +162,15 @@ int openssl_init(void)
 	(void)signal(SIGPIPE, sigpipe_handler);
 #endif
 
-	SSL_library_init();
-	SSL_load_error_strings();
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+	if (!OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL)) {
+		return false;
+	}
+#else
+ 	SSL_library_init();
+ 	SSL_load_error_strings();
+ 	OpenSSL_add_all_algorithms();
+#endif
 
 	return 0;
 }
@@ -158,7 +178,6 @@ int openssl_init(void)
 
 void openssl_close(void)
 {
-	ERR_free_strings();
 #if defined (HAVE_PTHREAD) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	lockv = mem_deref(lockv);
 #endif
